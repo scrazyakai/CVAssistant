@@ -213,7 +213,7 @@
 <script setup>
 import { computed, ref } from "vue";
 
-const API_BASE = import.meta.env.VITE_API_BASE || "http://117.72.163.64:8000/api/v1";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://test.52xinxin.top:8000/api/v1";
 
 const selectedFile = ref(null);
 const jobDescription = ref("");
