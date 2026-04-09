@@ -1,14 +1,13 @@
 # AI Resume Analysis Assistant
 
-MVP project built with `FastAPI + LangChain + OpenAI + PyMuPDF + Vue`.
-It supports PDF resume parsing, structured information extraction, and job-description matching.
+MVP project built with `FastAPI + DashScope(Qwen) + Vue`.
+It uploads resume PDFs directly to Qwen for structured extraction and JD matching.
 
 ## Features
 
 - Upload a single PDF resume
-- Extract text from multi-page PDFs with `PyMuPDF`
-- Clean and normalize resume text
-- Use `LangChain + OpenAI` to extract candidate information
+- Upload resume PDFs directly to Qwen through DashScope's OpenAI-compatible API
+- Let Qwen read the PDF and extract candidate information
 - Match a resume against a job description and return structured scores
 - Cache repeated parse and match results locally in `.cache/`
 - Provide a simple Vue frontend for demo and review
@@ -41,8 +40,9 @@ pip install -r requirements.txt
 Copy [`.env.example`](/C:/Users/AKai/Desktop/CVAnalysisAssistant/.env.example) to `.env`.
 
 ```env
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-4.1-mini
+LLM_API_KEY=your_dashscope_api_key
+LLM_MODEL=qwen-doc-turbo
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
 CORS_ORIGINS=["http://localhost:5173"]
 ```
 
@@ -83,15 +83,10 @@ Returns cleaned text and extracted candidate information.
 
 ### `POST /api/v1/resumes/match`
 
-JSON body:
+Form data:
 
-```json
-{
-  "job_description": "3+ years Python backend experience with FastAPI and LLM products",
-  "resume_text": "cleaned resume text",
-  "extracted_info": {}
-}
-```
+- `file`: PDF resume
+- `job_description`: target job description
 
 Returns structured match scoring.
 
@@ -116,7 +111,7 @@ A `Dockerfile` and `render.yaml` are included for deployment to Render or simila
 
 ## Fallback Behavior
 
-If `OPENAI_API_KEY` is missing or the model call fails, the backend falls back to local heuristics so the demo flow still works.
+The backend uses Qwen through DashScope's OpenAI-compatible endpoint and sends the uploaded PDF directly to the model. If the model call fails, the API returns an error instead of falling back to local heuristics.
 
 ## Next Improvements
 

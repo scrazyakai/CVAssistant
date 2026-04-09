@@ -11,7 +11,7 @@ class BasicInfo(BaseModel):
 
 
 class CandidateProfile(BaseModel):
-    basic_info: BasicInfo
+    basic_info: BasicInfo = Field(default_factory=BasicInfo)
     job_intention: str | None = None
     expected_salary: str | None = None
     years_of_experience: str | None = None
@@ -23,16 +23,10 @@ class CandidateProfile(BaseModel):
 
 class ResumeParseResponse(BaseModel):
     file_name: str
-    text_length: int
-    cleaned_text: str
+    text_length: int | None = None
+    cleaned_text: str | None = None
     extracted_info: CandidateProfile
     cache_hit: bool = False
-
-
-class JobMatchRequest(BaseModel):
-    job_description: str = Field(..., min_length=10)
-    resume_text: str | None = None
-    extracted_info: CandidateProfile | None = None
 
 
 class MatchBreakdown(BaseModel):
@@ -46,18 +40,23 @@ class MatchBreakdown(BaseModel):
     reasoning: str | None = None
 
 
+class ResumeAnalyzeLLMResponse(BaseModel):
+    extracted_info: CandidateProfile
+    match: MatchBreakdown
+
+
 class ResumeMatchResponse(BaseModel):
     job_description: str
     extracted_info: CandidateProfile
     match: MatchBreakdown
-    cleaned_text: str
+    cleaned_text: str | None = None
     cache_hit: bool = False
 
 
 class ResumeAnalysisResponse(BaseModel):
     file_name: str
-    text_length: int
-    cleaned_text: str
+    text_length: int | None = None
+    cleaned_text: str | None = None
     extracted_info: CandidateProfile
     match: MatchBreakdown
     job_description: str
