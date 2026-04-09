@@ -1,7 +1,10 @@
 import re
 from pathlib import Path
 
-import fitz
+try:
+    import fitz  # type: ignore
+except ModuleNotFoundError:  # PyMuPDF newer import path
+    import pymupdf as fitz  # type: ignore
 
 
 class ResumeService:

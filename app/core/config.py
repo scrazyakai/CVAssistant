@@ -1,8 +1,10 @@
 from functools import lru_cache
+import json
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import AliasChoices, Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -32,7 +34,7 @@ class Settings(BaseSettings):
     redis_db: int = 0
     cache_dir: Path = Path(".cache")
     resume_storage_dir: Path = Path("app/CV")
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: Annotated[list[str], NoDecode] = ["*"]
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -40,43 +42,34 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    @field_validator("cors_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, value: object) -> object:
+        if value is None or value == "":
+            return ["*"]
+        if isinstance(value, list):
+            cleaned = [str(item).strip() for item in value if str(item).strip()]
+            if "*" in cleaned and len(cleaned) > 1:
+                cleaned = [item for item in cleaned if item != "*"]
+            return cleaned or ["*"]
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return ["*"]
+            if stripped.startswith("["):
+                parsed = json.loads(stripped)
+                cleaned = [str(item).strip() for item in parsed if str(item).strip()]
+            else:
+                cleaned = [item.strip() for item in stripped.split(",") if item.strip()]
+            if "*" in cleaned and len(cleaned) > 1:
+                cleaned = [item for item in cleaned if item != "*"]
+            return cleaned or ["*"]
+        return value
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     settings = Settings()
-    example_env = Path(".env.example")
-    if example_env.exists():
-        example_values: dict[str, str] = {}
-        for raw_line in example_env.read_text(encoding="utf-8").splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            example_values[key.strip()] = value.strip()
-
-        if not settings.llm_api_key:
-            for candidate in ("LLM_API_KEY", "DASHSCOPE_API_KEY", "QWEN_API_KEY", "OPENAI_API_KEY"):
-                if example_values.get(candidate):
-                    settings.llm_api_key = example_values[candidate]
-                    break
-        if settings.llm_model == "qwen-doc-turbo":
-            for candidate in ("LLM_MODEL", "QWEN_MODEL", "OPENAI_MODEL"):
-                if example_values.get(candidate):
-                    settings.llm_model = example_values[candidate]
-                    break
-        if settings.llm_base_url == "https://dashscope.aliyuncs.com/compatible-mode/v1":
-            for candidate in ("LLM_BASE_URL", "QWEN_BASE_URL", "OPENAI_BASE_URL"):
-                if example_values.get(candidate):
-                    settings.llm_base_url = example_values[candidate]
-                    break
-        if settings.redis_host == "124.223.70.93" and example_values.get("REDIS_HOST"):
-            settings.redis_host = example_values["REDIS_HOST"]
-        if settings.redis_port == 6379 and example_values.get("REDIS_PORT"):
-            settings.redis_port = int(example_values["REDIS_PORT"])
-        if not settings.redis_password and example_values.get("REDIS_PASSWORD"):
-            settings.redis_password = example_values["REDIS_PASSWORD"]
-        if settings.redis_db == 0 and example_values.get("REDIS_DB"):
-            settings.redis_db = int(example_values["REDIS_DB"])
     settings.cache_dir.mkdir(parents=True, exist_ok=True)
     settings.resume_storage_dir.mkdir(parents=True, exist_ok=True)
     return settings
